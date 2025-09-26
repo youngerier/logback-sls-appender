@@ -21,7 +21,6 @@ public class AsyncSlsProtobufAppender extends AsyncAppender {
     private int batchSize;
     private int queueSize;
     private int flushIntervalMs;
-    private boolean useBase64Encoding;
 
     @Override
     public void start() {
@@ -43,7 +42,6 @@ public class AsyncSlsProtobufAppender extends AsyncAppender {
         if (flushIntervalMs > 0) {
             slsProtobufAppender.setFlushIntervalMs(flushIntervalMs);
         }
-        slsProtobufAppender.setUseBase64Encoding(useBase64Encoding);
 
         // 设置上下文并启动SlsProtobufAppender
         slsProtobufAppender.setContext(getContext());
@@ -97,7 +95,4 @@ public class AsyncSlsProtobufAppender extends AsyncAppender {
         this.flushIntervalMs = flushIntervalMs;
     }
 
-    public void setUseBase64Encoding(boolean useBase64Encoding) {
-        this.useBase64Encoding = useBase64Encoding;
-    }
 }

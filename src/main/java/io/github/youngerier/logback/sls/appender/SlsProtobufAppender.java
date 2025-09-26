@@ -9,7 +9,6 @@ import com.aliyun.openservices.log.request.PutLogsRequest;
 import io.github.youngerier.logback.sls.proto.LogMessage;
 
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -30,7 +29,6 @@ public class SlsProtobufAppender extends AppenderBase<ILoggingEvent> {
     private int batchSize = 100;
     private int queueSize = 10000;
     private int flushIntervalMs = 1000;
-    private boolean useBase64Encoding = true;
 
     private transient Client client;
     private transient BlockingQueue<LogItem> logItemQueue;
@@ -107,13 +105,12 @@ public class SlsProtobufAppender extends AppenderBase<ILoggingEvent> {
             // 封装为 SLS LogItem
             LogItem item = new LogItem();
 
-            // 性能优化：使用Base64编码二进制数据
-            if (useBase64Encoding) {
-                item.PushBack("protobuf", Base64.getEncoder().encodeToString(data));
-            } else {
-                // Always use Base64 encoding to avoid data corruption
-                item.PushBack("protobuf",new String(data));
-            }
+            // 添加可读的日志字段
+            item.PushBack("level", level);
+            item.PushBack("thread", thread);
+            item.PushBack("logger", logger);
+            item.PushBack("message", message);
+            item.PushBack("timestamp", String.valueOf(event.getTimeStamp()));
 
             // 性能优化：使用队列和批处理
             boolean offered = logItemQueue.offer(item);
@@ -218,9 +215,5 @@ public class SlsProtobufAppender extends AppenderBase<ILoggingEvent> {
 
     public void setFlushIntervalMs(int flushIntervalMs) {
         this.flushIntervalMs = flushIntervalMs > 0 ? flushIntervalMs : 1000;
-    }
-
-    public void setUseBase64Encoding(boolean useBase64Encoding) {
-        this.useBase64Encoding = useBase64Encoding;
     }
 }
