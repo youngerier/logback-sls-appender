@@ -2,11 +2,12 @@ package io.github.youngerier.logback.sls.appender;
 
 import ch.qos.logback.core.AppenderBase;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import logging.LogMessage;
-// 生成的protobuf类
+import io.github.youngerier.logback.sls.proto.LogMessage;
 
 import com.aliyun.openservices.log.Client;
 import com.aliyun.openservices.log.common.LogItem;
+import com.aliyun.openservices.log.exception.LogException;
+import com.aliyun.openservices.log.request.PutLogsRequest;
 
 import java.util.Collections;
 
@@ -45,9 +46,11 @@ public class SlsProtobufAppender extends AppenderBase<ILoggingEvent> {
             item.PushBack("protobuf", new String(data));
             // ⚠️ SLS 日志存储 key/value，需要考虑是否 base64 或 hex 编码保存
 
-            client.PutLogs(project, logStore, "", Collections.singletonList(item));
+            // 修复PutLogs方法调用
+            PutLogsRequest request = new PutLogsRequest(project, logStore, "", Collections.singletonList(item));
+            client.PutLogs(request);
 
-        } catch (Exception e) {
+        } catch (LogException e) {
             addError("Failed to send log to SLS", e);
         }
     }
