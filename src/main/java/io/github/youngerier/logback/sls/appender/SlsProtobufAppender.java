@@ -1,14 +1,17 @@
 package io.github.youngerier.logback.sls.appender;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.IThrowableProxy;
+import ch.qos.logback.classic.spi.StackTraceElementProxy;
 import ch.qos.logback.core.AppenderBase;
 import com.aliyun.openservices.log.Client;
 import com.aliyun.openservices.log.common.LogItem;
 import com.aliyun.openservices.log.exception.LogException;
 import com.aliyun.openservices.log.request.PutLogsRequest;
-import io.github.youngerier.logback.sls.proto.LogMessage;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -83,24 +86,29 @@ public class SlsProtobufAppender extends AppenderBase<ILoggingEvent> {
                 return;
             }
 
-            // 构建protobuf对象
-            LogMessage.Builder builder = LogMessage.newBuilder();
-
             // 边界条件检查：验证各字段不为空
             String level = event.getLevel() != null ? event.getLevel().toString() : "UNKNOWN";
             String thread = event.getThreadName() != null ? event.getThreadName() : "";
             String logger = event.getLoggerName() != null ? event.getLoggerName() : "";
             String message = event.getFormattedMessage() != null ? event.getFormattedMessage() : "";
 
-            LogMessage logMessage = builder
-                    .setLevel(level)
-                    .setThread(thread)
-                    .setLogger(logger)
-                    .setMessage(message)
-                    .setTimestamp(event.getTimeStamp())
-                    .build();
+            // 获取异常堆栈信息
+            String stacktrace = "";
+            if (event.getThrowableProxy() != null) {
+                StringBuilder sb = new StringBuilder();
+                // 获取异常信息
+                sb.append(event.getThrowableProxy().getMessage()).append("\n");
 
-            byte[] data = logMessage.toByteArray();
+                // 使用IThrowableProxy的正确方法获取堆栈信息
+                IThrowableProxy throwableProxy = event.getThrowableProxy();
+                StackTraceElementProxy[] stackTraceElementProxies = throwableProxy.getStackTraceElementProxyArray();
+                if (stackTraceElementProxies != null) {
+                    for (StackTraceElementProxy step : stackTraceElementProxies) {
+                        sb.append(step.getStackTraceElement().toString()).append("\n");
+                    }
+                }
+                stacktrace = sb.toString();
+            }
 
             // 封装为 SLS LogItem
             LogItem item = new LogItem();
@@ -110,7 +118,14 @@ public class SlsProtobufAppender extends AppenderBase<ILoggingEvent> {
             item.PushBack("thread", thread);
             item.PushBack("logger", logger);
             item.PushBack("message", message);
-            item.PushBack("timestamp", String.valueOf(event.getTimeStamp()));
+            
+            // 使用格式化的时间而不是时间戳
+            String formattedTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date(event.getTimeStamp()));
+            item.PushBack("time", formattedTime);
+            
+            if (!isEmpty(stacktrace)) {
+                item.PushBack("stacktrace", stacktrace);
+            }
 
             // 性能优化：使用队列和批处理
             boolean offered = logItemQueue.offer(item);
