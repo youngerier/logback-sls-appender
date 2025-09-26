@@ -1,13 +1,14 @@
 # Logback SLS Appender
 
-这是一个用于将日志发送到阿里云日志服务(SLS)的Logback Appender库。该库使用Protocol Buffers格式序列化日志消息，提高传输效率和存储密度。
+这是一个用于将日志发送到阿里云日志服务(SLS)的Logback Appender库。该库提供高效的日志传输和存储功能。
 
 ## 功能特点
 
 - 支持将Logback日志直接发送到阿里云SLS
-- 使用Protocol Buffers序列化日志消息
 - 支持自定义日志字段
 - 高效的日志传输和存储
+- 异步日志处理，不阻塞应用程序
+- 内置失败重试机制
 
 ## 快速开始
 
@@ -55,15 +56,41 @@
 
 ## 日志格式
 
-日志消息使用Protocol Buffers格式序列化，包含以下字段:
+日志消息包含以下字段:
 
-```protobuf
-message LogMessage {
-  string level = 1;     // 日志级别
-  string thread = 2;    // 线程名称
-  string logger = 3;    // 日志记录器名称
-  string message = 4;   // 日志消息内容
-  int64 timestamp = 5;  // 时间戳(毫秒)
+```
+- level      // 日志级别
+- thread     // 线程名称
+- logger     // 日志记录器名称
+- message    // 日志消息内容
+- timestamp  // 时间戳(毫秒)
+- mdc        // MDC上下文
+- throwable  // 异常信息
+```
+
+### 自定义日志字段
+
+你可以通过MDC添加自定义字段到日志中:
+
+```java
+import org.slf4j.MDC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class Example {
+    private static final Logger logger = LoggerFactory.getLogger(Example.class);
+    
+    public void process(String requestId, String userId) {
+        MDC.put("requestId", requestId);
+        MDC.put("userId", userId);
+        
+        try {
+            logger.info("Processing request");
+            // 业务逻辑
+        } finally {
+            MDC.clear();  // 清理MDC上下文
+        }
+    }
 }
 ```
 
