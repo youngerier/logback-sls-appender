@@ -8,12 +8,14 @@ import com.aliyun.openservices.log.Client;
 import com.aliyun.openservices.log.common.LogItem;
 import com.aliyun.openservices.log.exception.LogException;
 import com.aliyun.openservices.log.request.PutLogsRequest;
+import org.slf4j.Marker;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -108,6 +110,13 @@ public class SlsProtobufAppender extends AppenderBase<ILoggingEvent> {
             if (throwableProxy != null) {
                 item.PushBack("exception", ThrowableProxyUtil.asString(throwableProxy));
             }
+            // Marker
+            Optional.ofNullable(event.getMarkerList())
+                    .filter(list -> !list.isEmpty())
+                    .map(marks->marks.stream().map(Marker::getName).toList())
+                    .ifPresent(list -> item.PushBack("marker", String.join(",", list)));
+
+
             // 添加可读的日志字段
             item.PushBack("level", level);
             item.PushBack("thread", thread);
