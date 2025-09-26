@@ -2,7 +2,7 @@ package io.github.youngerier.logback.sls.appender;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
-import ch.qos.logback.classic.spi.StackTraceElementProxy;
+import ch.qos.logback.classic.spi.ThrowableProxyUtil;
 import ch.qos.logback.core.AppenderBase;
 import com.aliyun.openservices.log.Client;
 import com.aliyun.openservices.log.common.LogItem;
@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -92,40 +93,30 @@ public class SlsProtobufAppender extends AppenderBase<ILoggingEvent> {
             String logger = event.getLoggerName() != null ? event.getLoggerName() : "";
             String message = event.getFormattedMessage() != null ? event.getFormattedMessage() : "";
 
-            // 获取异常堆栈信息
-            String stacktrace = "";
-            if (event.getThrowableProxy() != null) {
-                StringBuilder sb = new StringBuilder();
-                // 获取异常信息
-                sb.append(event.getThrowableProxy().getMessage()).append("\n");
-
-                // 使用IThrowableProxy的正确方法获取堆栈信息
-                IThrowableProxy throwableProxy = event.getThrowableProxy();
-                StackTraceElementProxy[] stackTraceElementProxies = throwableProxy.getStackTraceElementProxyArray();
-                if (stackTraceElementProxies != null) {
-                    for (StackTraceElementProxy step : stackTraceElementProxies) {
-                        sb.append(step.getStackTraceElement().toString()).append("\n");
-                    }
-                }
-                stacktrace = sb.toString();
-            }
 
             // 封装为 SLS LogItem
             LogItem item = new LogItem();
-
+            // MDC（例如 traceId, spanId）
+            Map<String, String> mdc = event.getMDCPropertyMap();
+            if (mdc != null) {
+                for (Map.Entry<String, String> entry : mdc.entrySet()) {
+                    item.PushBack(entry.getKey(), entry.getValue());
+                }
+            }
+            // 异常堆栈
+            IThrowableProxy throwableProxy = event.getThrowableProxy();
+            if (throwableProxy != null) {
+                item.PushBack("exception", ThrowableProxyUtil.asString(throwableProxy));
+            }
             // 添加可读的日志字段
             item.PushBack("level", level);
             item.PushBack("thread", thread);
             item.PushBack("logger", logger);
             item.PushBack("message", message);
-            
+
             // 使用格式化的时间而不是时间戳
             String formattedTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date(event.getTimeStamp()));
             item.PushBack("time", formattedTime);
-            
-            if (!isEmpty(stacktrace)) {
-                item.PushBack("stacktrace", stacktrace);
-            }
 
             // 性能优化：使用队列和批处理
             boolean offered = logItemQueue.offer(item);
