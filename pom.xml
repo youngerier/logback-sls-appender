@@ -5,7 +5,7 @@
 
     <groupId>io.github.youngerier</groupId>
     <artifactId>logback-sls-appender</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <packaging>jar</packaging>
     <name>logback-sls-appender</name>
     <description>Logback appender for Aliyun SLS</description>
