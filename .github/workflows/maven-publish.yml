@@ -16,22 +16,32 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-          cache: maven
+          server-id: ossrh
+          server-username: ${{ secrets.OSSRH_USERNAME }}
+          server-password: ${{ secrets.OSSRH_PASSWORD }}
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-
-      - name: Build and deploy
-        env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+      # 1. 明确生成 ~/.m2/settings.xml，确保 server-id 与 deploy/publish 插件一致
+      - name: Setup settings.xml for Maven Central
         run: |
-          mvn -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" \
-          -DskipTests \
-          -Dossrh.username="${{ secrets.OSSRH_USERNAME }}" \
-          -Dossrh.password="${{ secrets.OSSRH_PASSWORD }}" \
-          -P release \
-          clean deploy
+          mkdir -p ~/.m2
+          echo '<settings>
+            <servers>
+              <server>
+                <id>ossrh</id>
+                <username>${{ secrets.OSSRH_USERNAME }}</username>
+                <password>${{ secrets.OSSRH_PASSWORD }}</password>
+              </server>
+            </servers>
+          </settings>' > ~/.m2/settings.xml
+
+      # 2. 可选：如有 GPG 密钥加密需求，则写入 settings-security.xml
+      # 如果你的 passphrase 是加密的（通常不是），才需要：
+      # - name: Setup settings-security.xml (如有需要)
+      #   run: |
+      #     echo "${{ secrets.SETTINGS_SECURITY_XML }}" > ~/.m2/settings-security.xml
+
+      # 3. 构建并发布
+      - name: Build and deploy
+        run: mvn clean deploy -P release --batch-mode
