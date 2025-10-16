@@ -5,7 +5,7 @@
     
     <groupId>io.github.youngerier</groupId>
     <artifactId>logback-sls-appender</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.3-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>logback-sls-appender</name>
     <description>Logback appender for Aliyun SLS</description>
@@ -111,6 +111,12 @@
         <dependency>
             <groupId>com.aliyun.openservices</groupId>
             <artifactId>aliyun-log-producer</artifactId>
+            <exclusions>
+                <exclusion>
+                    <artifactId>protobuf-java</artifactId>
+                    <groupId>com.google.protobuf</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
         
         <!-- Test Dependencies -->
@@ -168,22 +174,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>${maven-gpg-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                        <configuration>
-                            <!-- 在GitHub Actions中使用 -->
-                            <gpgArguments>
-                                <arg>--pinentry-mode</arg>
-                                <arg>loopback</arg>
-                            </gpgArguments>
-                        </configuration>
-                    </execution>
-                </executions>
+                <!-- GPG签名配置移到release profile中 -->
             </plugin>
             
             <!-- Nexus Staging Plugin -->
@@ -209,6 +200,28 @@
     </build>
     
     <profiles>
+        <!-- 本地开发profile - 跳过GPG签名 -->
+        <profile>
+            <id>local-dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <!-- 覆盖GPG插件配置，跳过签名 -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven-gpg-plugin.version}</version>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- 发布profile - 启用GPG签名 -->
         <profile>
             <id>release</id>
             <activation>
@@ -217,6 +230,32 @@
                     <value>true</value>
                 </property>
             </activation>
+            <build>
+                <plugins>
+                    <!-- GPG Plugin for release -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven-gpg-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- 在GitHub Actions中使用 -->
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 
