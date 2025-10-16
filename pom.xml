@@ -49,11 +49,11 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <protobuf.version>4.26.1</protobuf.version>
         
         <!-- 依赖版本属性 -->
         <logback.version>1.5.18</logback.version>
         <aliyun-log-producer.version>0.3.27</aliyun-log-producer.version>
+        <aliyun-log.version>0.6.136</aliyun-log.version>
         <junit.version>4.13.2</junit.version>
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
         <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
@@ -84,6 +84,13 @@
                 <version>${aliyun-log-producer.version}</version>
             </dependency>
             
+            <!-- Aliyun SLS Log -->
+            <dependency>
+                <groupId>com.aliyun.openservices</groupId>
+                <artifactId>aliyun-log</artifactId>
+                <version>${aliyun-log.version}</version>
+            </dependency>
+            
             <!-- Test Dependencies -->
             <dependency>
                 <groupId>junit</groupId>
@@ -112,6 +119,20 @@
             <groupId>com.aliyun.openservices</groupId>
             <artifactId>aliyun-log-producer</artifactId>
             <exclusions>
+                <!-- 完全排除protobuf依赖 -->
+                <exclusion>
+                    <artifactId>protobuf-java</artifactId>
+                    <groupId>com.google.protobuf</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        
+        <!-- 使用aliyun-log直接依赖，避免protobuf -->
+        <dependency>
+            <groupId>com.aliyun.openservices</groupId>
+            <artifactId>aliyun-log</artifactId>
+            <exclusions>
+                <!-- 排除所有protobuf相关依赖 -->
                 <exclusion>
                     <artifactId>protobuf-java</artifactId>
                     <groupId>com.google.protobuf</groupId>
