@@ -284,7 +284,8 @@ public class SlsAppender extends AppenderBase<ILoggingEvent> {
                 } else {
                     addWarn("Failed to send logs to SLS, retrying (" + retries + "/" + maxRetries + ")", e);
                     try {
-                        Thread.sleep(1000 * retries); // 指数退避
+                        // 指数退避
+                        Thread.sleep(1000L * retries);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         break;
