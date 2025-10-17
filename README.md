@@ -22,7 +22,7 @@
 <dependency>
     <groupId>io.github.youngerier</groupId>
     <artifactId>logback-sls-appender</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.0.4</version>
 </dependency>
 ```
 
@@ -54,6 +54,8 @@
         <batchSize>100</batchSize>
         <flushInterval>5000</flushInterval>
         <maxRetries>3</maxRetries>
+        <queueCapacity>10000</queueCapacity>
+        <compressionType>LZ4</compressionType>
     </appender>
     
     <root level="INFO">
@@ -91,19 +93,23 @@ mvn compile exec:java -Dexec.mainClass="io.github.youngerier.logback.sls.appende
 | batchSize | 批量发送大小 | 100 |
 | flushInterval | 刷新间隔(毫秒) | 5000 |
 | maxRetries | 最大重试次数 | 3 |
+| queueCapacity | 事件队列容量 | 10000 |
+| compressionType | 压缩类型 (LZ4/GZIP/NONE) | LZ4 |
 
 ## 日志字段
 
 发送到 SLS 的日志包含以下字段：
 
+- `content`: 格式化后的完整日志内容
 - `level`: 日志级别 (DEBUG, INFO, WARN, ERROR)
 - `logger`: Logger 名称
 - `thread`: 线程名
-- `message`: 格式化后的日志消息
+- `message`: 原始日志消息
+- `formatted_message`: 格式化后的日志消息（如果与原始消息不同）
 - `mdc.*`: MDC 上下文字段（如果有）
-- `exception`: 异常类名（如果有）
+- `exception_class`: 异常类名（如果有）
 - `exception_message`: 异常消息（如果有）
-- `stack_trace`: 异常堆栈跟踪（如果有）
+- `exception_stack_trace`: 异常堆栈跟踪（如果有）
 
 ## 性能优化建议
 
@@ -127,6 +133,29 @@ mvn compile exec:java -Dexec.mainClass="io.github.youngerier.logback.sls.appende
 2. **认证失败**：检查 AccessKey 是否正确，是否有 SLS 权限
 3. **项目不存在**：确保 SLS 项目和日志库已创建
 4. **日志丢失**：检查网络连接，增加重试次数
+
+## 开发和贡献
+
+### 构建项目
+
+```bash
+mvn clean compile
+```
+
+### 运行测试
+
+```bash
+mvn test
+```
+
+### 发布版本
+
+项目使用 GitHub Actions 自动发布到 Maven Central。创建新的 tag 即可触发发布流程：
+
+```bash
+git tag v0.0.5
+git push origin v0.0.5
+```
 
 ## 许可证
 
