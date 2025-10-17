@@ -13,14 +13,14 @@
     <name>logback-sls-appender</name>
     <description>High-performance Logback appender for Alibaba Cloud SLS (Simple Log Service)</description>
     <url>https://github.com/youngerier/logback-sls-appender</url>
-    
+
     <licenses>
         <license>
             <name>The Apache License, Version 2.0</name>
             <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
     </licenses>
-    
+
     <developers>
         <developer>
             <name>youngerier</name>
@@ -29,13 +29,13 @@
             <organizationUrl>https://github.com/youngerier</organizationUrl>
         </developer>
     </developers>
-    
+
     <scm>
         <connection>scm:git:git://github.com/youngerier/logback-sls-appender.git</connection>
         <developerConnection>scm:git:ssh://github.com:youngerier/logback-sls-appender.git</developerConnection>
         <url>https://github.com/youngerier/logback-sls-appender/tree/main</url>
     </scm>
-    
+
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>
@@ -52,6 +52,9 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <central-publishing-maven-plugin.version>0.9.0</central-publishing-maven-plugin.version>
+
+        <!-- 依赖版本属性 -->
 
         <!-- 核心依赖版本 -->
         <logback.version>1.5.18</logback.version>
@@ -110,18 +113,24 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Logback Classic -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Aliyun SLS Producer -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
             <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Test Dependencies -->
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
@@ -192,7 +201,7 @@
                     </execution>
                 </executions>
             </plugin>
-            
+
             <!-- Javadoc Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
