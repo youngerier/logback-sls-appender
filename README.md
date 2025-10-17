@@ -157,6 +157,15 @@ git tag v0.0.5
 git push origin v0.0.5
 ```
 
+#### 必需的 GitHub Actions Secrets（Central Portal）
+
+- `CENTRAL_USERNAME`：Portal 用户令牌的“用户名”（令牌名称，不是登录账号）
+- `CENTRAL_PASSWORD`：Portal 用户令牌的“密码”（令牌值）
+- `GPG_PRIVATE_KEY`：用于签名的私钥（ASCII-armored，例如 `-----BEGIN PGP PRIVATE KEY BLOCK-----` 开头）
+- `GPG_PASSPHRASE`：该私钥的口令
+
+说明：Central Publishing 插件会在 `mvn deploy` 时自动上传到 Portal。Snapshots 仍使用 `distributionManagement` 中的 s01 snapshots 仓库。
+
 ## 许可证
 
 Apache License 2.0
