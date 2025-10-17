@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+    
+    <!-- 控制台输出 Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    
+    <!-- 阿里云 SLS Appender -->
+    <appender name="SLS" class="io.github.youngerier.logback.sls.appender.SlsAppender">
+        <!-- SLS 连接配置 -->
+        <endpoint>https://cn-shenzhen.log.aliyuncs.com</endpoint>
+        <accessKeyId>...</accessKeyId>
+        <accessKeySecret>...</accessKeySecret>
+        <project>test-dev-service</project>
+        <logstore>test-white-label</logstore>
+        
+        <!-- 可选配置 -->
+        <source>logback-sls-appender</source>
+        <topic>application-logs</topic>
+        
+        <!-- 性能配置 -->
+        <batchSize>100</batchSize>
+        <flushInterval>5000</flushInterval>
+        <maxRetries>3</maxRetries>
+        
+        <!-- 日志格式化（可选） -->
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    
+    <!-- 异步 SLS Appender（推荐用于高并发场景） -->
+    <appender name="ASYNC_SLS" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="SLS"/>
+        <queueSize>1000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>true</includeCallerData>
+    </appender>
+    
+    <!-- 根日志级别配置 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="SLS"/>
+    </root>
+    
+    <!-- 特定包的日志级别配置 -->
+    <logger name="io.github.youngerier" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="SLS"/>
+    </logger>
+    
+    <!-- 阿里云 SDK 日志级别（避免过多日志） -->
+    <logger name="com.aliyun" level="WARN"/>
+    
+</configuration>

@@ -1,114 +1,133 @@
 # Logback SLS Appender
 
-这是一个用于将日志发送到阿里云日志服务(SLS)的Logback Appender库。该库提供高效的日志传输和存储功能。
+高性能的 Logback Appender，用于将应用日志发送到阿里云日志服务 (SLS)。
 
-## 功能特点
+## 特性
 
-- 支持将Logback日志直接发送到阿里云SLS
-- 支持自定义日志字段
-- 高效的日志传输和存储
-- 异步日志处理，不阻塞应用程序
-- 内置失败重试机制
+- ✅ 异步批量发送，高性能
+- ✅ 支持 JSON 格式（非 protobuf）
+- ✅ 自动重试机制
+- ✅ 支持 MDC 上下文
+- ✅ 支持异常堆栈跟踪
+- ✅ 可配置的批量大小和刷新间隔
+- ✅ 优雅关闭处理
 
 ## 快速开始
 
 ### 1. 添加依赖
 
-在你的Maven项目中添加以下依赖:
+在你的 `pom.xml` 中添加依赖：
 
 ```xml
 <dependency>
     <groupId>io.github.youngerier</groupId>
     <artifactId>logback-sls-appender</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
 </dependency>
 ```
 
-### 2. 配置Logback
-
-在`logback.xml`或`logback-spring.xml`中添加SLS Appender配置:
+### 2. 配置 logback.xml
 
 ```xml
+<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <appender name="SLS" class="io.github.youngerier.logback.sls.appender.SlsProtobufAppender">
-        <endpoint>your-endpoint</endpoint>
-        <accessKeyId>your-access-key-id</accessKeyId>
-        <accessKeySecret>your-access-key-secret</accessKeySecret>
-        <project>your-sls-project</project>
-        <logStore>your-logstore</logStore>
+    
+    <!-- 控制台输出 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    
+    <!-- SLS Appender -->
+    <appender name="SLS" class="io.github.youngerier.logback.sls.appender.SlsAppender">
+        <!-- 必需配置 -->
+        <endpoint>https://cn-hangzhou.log.aliyuncs.com</endpoint>
+        <accessKeyId>你的AccessKeyId</accessKeyId>
+        <accessKeySecret>你的AccessKeySecret</accessKeySecret>
+        <project>你的项目名</project>
+        <logstore>你的日志库名</logstore>
+        
+        <!-- 可选配置 -->
+        <source>your-app-name</source>
+        <topic>application-logs</topic>
+        <batchSize>100</batchSize>
+        <flushInterval>5000</flushInterval>
+        <maxRetries>3</maxRetries>
     </appender>
     
     <root level="INFO">
-        <appender-ref ref="SLS" />
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="SLS"/>
     </root>
+    
 </configuration>
 ```
 
-### 3. 配置参数说明
-
-| 参数 | 描述 | 必填 |
-| --- | --- | --- |
-| endpoint | 阿里云SLS服务的Endpoint | 是 |
-| accessKeyId | 阿里云访问密钥ID | 是 |
-| accessKeySecret | 阿里云访问密钥Secret | 是 |
-| project | SLS项目名称 | 是 |
-| logStore | SLS日志库名称 | 是 |
-
-## 日志格式
-
-日志消息包含以下字段:
-
-```
-- level      // 日志级别
-- thread     // 线程名称
-- logger     // 日志记录器名称
-- message    // 日志消息内容
-- timestamp  // 时间戳(毫秒)
-- mdc        // MDC上下文
-- throwable  // 异常信息
-```
-
-### 自定义日志字段
-
-你可以通过MDC添加自定义字段到日志中:
-
-```java
-import org.slf4j.MDC;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-public class Example {
-    private static final Logger logger = LoggerFactory.getLogger(Example.class);
-    
-    public void process(String requestId, String userId) {
-        MDC.put("requestId", requestId);
-        MDC.put("userId", userId);
-        
-        try {
-            logger.info("Processing request");
-            // 业务逻辑
-        } finally {
-            MDC.clear();  // 清理MDC上下文
-        }
-    }
-}
-```
-
-## 构建项目
-
-如果你想从源码构建该项目:
+### 3. 运行测试
 
 ```bash
-git clone https://github.com/youngerier/logback-sls-appender.git
-cd logback-sls-appender
-mvn clean install
+mvn compile exec:java -Dexec.mainClass="io.github.youngerier.logback.sls.appender.Application"
 ```
 
-## 注意事项
+## 配置参数
 
-- 确保你的阿里云账号有足够的权限访问SLS服务
-- 建议在生产环境中使用异步Appender包装SlsProtobufAppender，以避免日志操作阻塞应用程序
+### 必需参数
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| endpoint | SLS 服务端点 | https://cn-hangzhou.log.aliyuncs.com |
+| accessKeyId | 阿里云 AccessKey ID | LTAI5t... |
+| accessKeySecret | 阿里云 AccessKey Secret | xxx |
+| project | SLS 项目名 | my-project |
+| logstore | SLS 日志库名 | my-logstore |
+
+### 可选参数
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| source | 日志来源标识 | "" |
+| topic | 日志主题 | "" |
+| batchSize | 批量发送大小 | 100 |
+| flushInterval | 刷新间隔(毫秒) | 5000 |
+| maxRetries | 最大重试次数 | 3 |
+
+## 日志字段
+
+发送到 SLS 的日志包含以下字段：
+
+- `level`: 日志级别 (DEBUG, INFO, WARN, ERROR)
+- `logger`: Logger 名称
+- `thread`: 线程名
+- `message`: 格式化后的日志消息
+- `mdc.*`: MDC 上下文字段（如果有）
+- `exception`: 异常类名（如果有）
+- `exception_message`: 异常消息（如果有）
+- `stack_trace`: 异常堆栈跟踪（如果有）
+
+## 性能优化建议
+
+1. **使用异步 Appender**：对于高并发场景，建议使用 AsyncAppender 包装 SLS Appender
+2. **调整批量大小**：根据日志量调整 `batchSize`，通常 50-200 之间
+3. **调整刷新间隔**：根据实时性要求调整 `flushInterval`
+4. **设置合适的日志级别**：避免发送过多 DEBUG 日志
+
+## 环境变量配置
+
+为了安全起见，建议使用环境变量配置敏感信息：
+
+```xml
+<accessKeyId>${SLS_ACCESS_KEY_ID}</accessKeyId>
+<accessKeySecret>${SLS_ACCESS_KEY_SECRET}</accessKeySecret>
+```
+
+## 故障排除
+
+1. **连接失败**：检查 endpoint 格式是否正确，是否包含 https://
+2. **认证失败**：检查 AccessKey 是否正确，是否有 SLS 权限
+3. **项目不存在**：确保 SLS 项目和日志库已创建
+4. **日志丢失**：检查网络连接，增加重试次数
 
 ## 许可证
 
-[Apache License 2.0](LICENSE)
+Apache License 2.0

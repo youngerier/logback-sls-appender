@@ -1,34 +1,47 @@
 name: Publish to Maven Central
 
 on:
-  release:
-    types: [created]
-  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: 17
           server-id: ossrh
           server-username: ${{ secrets.OSSRH_USERNAME }}
           server-password: ${{ secrets.OSSRH_PASSWORD }}
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          
-      - name: Build with Maven
-        run: mvn -B clean package
-        
-      - name: Publish to Maven Central
+
+      # 1. 明确生成 ~/.m2/settings.xml，确保 server-id 与 deploy/publish 插件一致
+      - name: Setup settings.xml for Maven Central
         run: |
-          mvn -B deploy -Prelease -DperformRelease=true
-        env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          mkdir -p ~/.m2
+          echo '<settings>
+            <servers>
+              <server>
+                <id>ossrh</id>
+                <username>${{ secrets.OSSRH_USERNAME }}</username>
+                <password>${{ secrets.OSSRH_PASSWORD }}</password>
+              </server>
+            </servers>
+          </settings>' > ~/.m2/settings.xml
+
+      # 2. 可选：如有 GPG 密钥加密需求，则写入 settings-security.xml
+      # 如果你的 passphrase 是加密的（通常不是），才需要：
+      # - name: Setup settings-security.xml (如有需要)
+      #   run: |
+      #     echo "${{ secrets.SETTINGS_SECURITY_XML }}" > ~/.m2/settings-security.xml
+
+      # 3. 构建并发布
+      - name: Build and deploy
+        run: mvn clean deploy -P release --batch-mode
