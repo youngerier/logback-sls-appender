@@ -84,6 +84,7 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-core</artifactId>
             <version>${logback.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Logback Classic - 必需 -->
@@ -91,6 +92,7 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- SLF4J API -->
@@ -98,6 +100,7 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- 阿里云 SLS SDK -->
@@ -105,6 +108,13 @@
             <groupId>com.aliyun.openservices</groupId>
             <artifactId>aliyun-log</artifactId>
             <version>${aliyun-log.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.protobuf</groupId>
+                    <artifactId>protobuf-java</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- 测试依赖 -->
