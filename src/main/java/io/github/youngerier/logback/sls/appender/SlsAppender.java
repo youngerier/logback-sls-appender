@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.aliyun.openservices.log.Client;
 import com.aliyun.openservices.log.common.Consts.CompressType;
-import com.aliyun.openservices.log.common.LogContent;
 import com.aliyun.openservices.log.common.LogItem;
 import com.aliyun.openservices.log.request.PutLogsRequest;
 import com.aliyun.openservices.log.response.PutLogsResponse;
@@ -664,24 +663,13 @@ public class SlsAppender extends AppenderBase<ILoggingEvent> {
     private void addExceptionInfo(LogItem logItem, ILoggingEvent event) {
         try {
             if (event.getThrowableProxy() != null) {
-                // 异常类名
-                String className = event.getThrowableProxy().getClassName();
-                if (className != null && !className.isEmpty()) {
-                    logItem.PushBack("exception_class", className);
-                }
-                
-                // 异常消息
-                String message = event.getThrowableProxy().getMessage();
-                if (message != null && !message.isEmpty()) {
-                    logItem.PushBack("exception_message", message);
-                }
                 
                 // 使用 Logback 标准的 ThrowableProxyUtil 处理堆栈跟踪
                 String stackTrace = ThrowableProxyUtil.asString(event.getThrowableProxy());
                 if (stackTrace != null && !stackTrace.isEmpty()) {
                     // 限制堆栈跟踪的长度，避免过长
-                    String truncatedStackTrace = stackTrace.length() > 5000 ? 
-                        stackTrace.substring(0, 5000) + "\n... (truncated)" : stackTrace;
+                    String truncatedStackTrace = stackTrace.length() > 20000 ? 
+                        stackTrace.substring(0, 20000) + "\n... (truncated)" : stackTrace;
                     logItem.PushBack("exception_stack_trace", truncatedStackTrace);
                 }
             }
