@@ -666,7 +666,7 @@ public class SlsAppender extends AppenderBase<ILoggingEvent> {
                 
                 // 使用 Logback 标准的 ThrowableProxyUtil 处理堆栈跟踪
                 String stackTrace = ThrowableProxyUtil.asString(event.getThrowableProxy());
-                if (stackTrace != null && !stackTrace.isEmpty()) {
+                if (!stackTrace.isEmpty()) {
                     // 限制堆栈跟踪的长度，避免过长
                     String truncatedStackTrace = stackTrace.length() > 20000 ? 
                         stackTrace.substring(0, 20000) + "\n... (truncated)" : stackTrace;
