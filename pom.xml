@@ -7,7 +7,7 @@
 
     <groupId>io.github.youngerier</groupId>
     <artifactId>logback-sls-appender</artifactId>
-    <version>0.0.5</version>
+    <version>0.0.6</version>
     <packaging>jar</packaging>
 
     <name>logback-sls-appender</name>
