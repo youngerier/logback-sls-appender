@@ -389,13 +389,29 @@ public class SlsAppender extends AppenderBase<ILoggingEvent> {
      */
     private void processEvents() {
         List<ILoggingEvent> batch = new ArrayList<>(batchSize);
+        List<ILoggingEvent> pendingRetryBatch = null;
         long lastFlushTime = System.currentTimeMillis();
 
         addInfo("Event processing thread started");
 
         try {
-            while (running.get() || !eventQueue.isEmpty()) {
+            while (running.get() || (eventQueue != null && !eventQueue.isEmpty()) || (pendingRetryBatch != null)) {
                 try {
+                    // 若存在待重试的批次，优先重试，避免该批次无限增长
+                    if (pendingRetryBatch != null) {
+                        try {
+                            sendBatch(new ArrayList<>(pendingRetryBatch));
+                            pendingRetryBatch = null;
+                            lastFlushTime = System.currentTimeMillis();
+                            addInfo("Pending retry batch sent successfully");
+                        } catch (Exception e) {
+                            addError("Retrying pending batch failed, will retry again", e);
+                            // 简单退避，避免忙等
+                            Thread.sleep(Math.min(flushInterval, 1000));
+                        }
+                        continue;
+                    }
+
                     // 从队列中获取事件
                     ILoggingEvent event = eventQueue.poll(QUEUE_POLL_TIMEOUT, TimeUnit.MILLISECONDS);
                     if (event != null) {
@@ -413,8 +429,10 @@ public class SlsAppender extends AppenderBase<ILoggingEvent> {
                             batch.clear();
                             lastFlushTime = currentTime;
                         } catch (Exception e) {
-                            addError("Failed to send batch, will retry in next cycle", e);
-                            // 不清空批次，下次循环时重试
+                            addError("Failed to send batch, will hold it for retry without growing", e);
+                            // 记录当前批次作为待重试批次，并清空当前批次，避免无限增长
+                            pendingRetryBatch = new ArrayList<>(batch);
+                            batch.clear();
                         }
                     }
 
@@ -428,6 +446,15 @@ public class SlsAppender extends AppenderBase<ILoggingEvent> {
                 }
             }
         } finally {
+            // 先尝试发送待重试批次
+            if (pendingRetryBatch != null && !pendingRetryBatch.isEmpty()) {
+                try {
+                    addInfo("Sending final pending retry batch of " + pendingRetryBatch.size() + " events");
+                    sendBatch(pendingRetryBatch);
+                } catch (Exception e) {
+                    addError("Failed to send final pending retry batch", e);
+                }
+            }
             // 发送剩余的批次
             if (!batch.isEmpty()) {
                 try {
