@@ -167,6 +167,7 @@ public class SlsAppender extends AppenderBase<ILoggingEvent> {
 
         // 验证必需配置
         if (!validateConfiguration()) {
+            addError("SLS Appender configuration validation failed, appender will not start. Please check endpoint and other required configurations.");
             return;
         }
 
