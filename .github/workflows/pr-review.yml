@@ -65,7 +65,7 @@ jobs:
           echo "" >> review-summary.md
           
           # Test results
-          if [ -f "target/surefire-reports/TEST-*.xml" ]; then
+          if ls target/surefire-reports/TEST-*.xml 2>/dev/null | grep -q .; then
             TESTS=$(find target/surefire-reports -name "TEST-*.xml" -exec grep -h "tests=" {} \; | head -1 | sed 's/.*tests="\([0-9]*\)".*/\1/')
             FAILURES=$(find target/surefire-reports -name "TEST-*.xml" -exec grep -h "failures=" {} \; | head -1 | sed 's/.*failures="\([0-9]*\)".*/\1/')
             ERRORS=$(find target/surefire-reports -name "TEST-*.xml" -exec grep -h "errors=" {} \; | head -1 | sed 's/.*errors="\([0-9]*\)".*/\1/')
@@ -81,7 +81,11 @@ jobs:
           if [ -f "target/site/jacoco/index.html" ]; then
             COVERAGE=$(grep -oP 'Total.*?([0-9]+)%' target/site/jacoco/index.html | tail -1 | grep -oP '[0-9]+' || echo "N/A")
             echo "### 📊 Code Coverage" >> review-summary.md
-            echo "- Coverage: ${COVERAGE}%" >> review-summary.md
+            if [ "$COVERAGE" != "N/A" ]; then
+              echo "- Coverage: ${COVERAGE}%" >> review-summary.md
+            else
+              echo "- Coverage: Not available" >> review-summary.md
+            fi
             echo "" >> review-summary.md
           fi
           
@@ -124,7 +128,7 @@ jobs:
             echo "- 💭 Consider addressing PMD violations to improve code quality" >> review-summary.md
           fi
           
-          if [ "${COVERAGE:-0}" != "N/A" ] && [ "${COVERAGE:-0}" -lt 70 ]; then
+          if [ "$COVERAGE" != "N/A" ] && [ "$COVERAGE" -lt 70 ] 2>/dev/null; then
             echo "- 📈 Consider adding more tests to improve code coverage (target: >70%)" >> review-summary.md
           fi
           
