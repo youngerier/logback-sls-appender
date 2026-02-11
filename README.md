@@ -136,6 +136,16 @@ mvn compile exec:java -Dexec.mainClass="io.github.youngerier.logback.sls.appende
 
 ## 开发和贡献
 
+### 自动代码审查
+
+本项目配置了自动代码审查系统，在提交 Pull Request 时会自动：
+- 运行单元测试
+- 生成代码覆盖率报告
+- 执行静态代码分析（SpotBugs、PMD、Checkstyle）
+- 在 PR 中自动评论审查结果和改进建议
+
+详细信息请参阅 [自动代码审查文档](docs/AUTO_REVIEW.md)。
+
 ### 构建项目
 
 ```bash
@@ -146,6 +156,13 @@ mvn clean compile
 
 ```bash
 mvn test
+```
+
+### 代码质量检查
+
+```bash
+# 运行所有静态分析工具
+mvn clean compile test spotbugs:check pmd:check checkstyle:check
 ```
 
 ### 发布版本
