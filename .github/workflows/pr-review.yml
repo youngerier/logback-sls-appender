@@ -1,0 +1,193 @@
+name: Automated PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Build project
+        run: mvn clean compile -B
+        continue-on-error: false
+
+      - name: Run tests
+        run: mvn test -B
+        continue-on-error: true
+        id: test
+
+      - name: Run SpotBugs analysis
+        run: mvn spotbugs:check -B
+        continue-on-error: true
+        id: spotbugs
+
+      - name: Run PMD analysis
+        run: mvn pmd:check -B
+        continue-on-error: true
+        id: pmd
+
+      - name: Run Checkstyle
+        run: mvn checkstyle:check -B
+        continue-on-error: true
+        id: checkstyle
+
+      - name: Generate code coverage
+        run: mvn jacoco:prepare-agent test jacoco:report -B
+        continue-on-error: true
+
+      - name: Analyze test results
+        if: always()
+        run: |
+          echo "## Code Review Summary" > review-summary.md
+          echo "" >> review-summary.md
+          
+          # Test results
+          if [ -f "target/surefire-reports/TEST-*.xml" ]; then
+            TESTS=$(find target/surefire-reports -name "TEST-*.xml" -exec grep -h "tests=" {} \; | head -1 | sed 's/.*tests="\([0-9]*\)".*/\1/')
+            FAILURES=$(find target/surefire-reports -name "TEST-*.xml" -exec grep -h "failures=" {} \; | head -1 | sed 's/.*failures="\([0-9]*\)".*/\1/')
+            ERRORS=$(find target/surefire-reports -name "TEST-*.xml" -exec grep -h "errors=" {} \; | head -1 | sed 's/.*errors="\([0-9]*\)".*/\1/')
+            
+            echo "### ✅ Test Results" >> review-summary.md
+            echo "- Total tests: ${TESTS:-0}" >> review-summary.md
+            echo "- Failures: ${FAILURES:-0}" >> review-summary.md
+            echo "- Errors: ${ERRORS:-0}" >> review-summary.md
+            echo "" >> review-summary.md
+          fi
+          
+          # Code coverage
+          if [ -f "target/site/jacoco/index.html" ]; then
+            COVERAGE=$(grep -oP 'Total.*?([0-9]+)%' target/site/jacoco/index.html | tail -1 | grep -oP '[0-9]+' || echo "N/A")
+            echo "### 📊 Code Coverage" >> review-summary.md
+            echo "- Coverage: ${COVERAGE}%" >> review-summary.md
+            echo "" >> review-summary.md
+          fi
+          
+          # SpotBugs results
+          if [ -f "target/spotbugsXml.xml" ]; then
+            BUGS=$(grep -c "<BugInstance" target/spotbugsXml.xml || echo "0")
+            echo "### 🐛 SpotBugs Analysis" >> review-summary.md
+            echo "- Potential bugs found: ${BUGS}" >> review-summary.md
+            echo "" >> review-summary.md
+          fi
+          
+          # PMD results
+          if [ -f "target/pmd.xml" ]; then
+            VIOLATIONS=$(grep -c "<violation" target/pmd.xml || echo "0")
+            echo "### 📋 PMD Analysis" >> review-summary.md
+            echo "- Code violations found: ${VIOLATIONS}" >> review-summary.md
+            echo "" >> review-summary.md
+          fi
+          
+          # Checkstyle results
+          if [ -f "target/checkstyle-result.xml" ]; then
+            STYLE_ISSUES=$(grep -c "<error" target/checkstyle-result.xml || echo "0")
+            echo "### 🎨 Checkstyle Analysis" >> review-summary.md
+            echo "- Style issues found: ${STYLE_ISSUES}" >> review-summary.md
+            echo "" >> review-summary.md
+          fi
+          
+          echo "### 💡 Recommendations" >> review-summary.md
+          echo "" >> review-summary.md
+          
+          if [ "${FAILURES:-0}" -gt 0 ] || [ "${ERRORS:-0}" -gt 0 ]; then
+            echo "- ⚠️ Please fix failing tests before merging" >> review-summary.md
+          fi
+          
+          if [ "${BUGS:-0}" -gt 0 ]; then
+            echo "- ⚠️ SpotBugs detected potential bugs. Review the findings in the build logs" >> review-summary.md
+          fi
+          
+          if [ "${VIOLATIONS:-0}" -gt 5 ]; then
+            echo "- 💭 Consider addressing PMD violations to improve code quality" >> review-summary.md
+          fi
+          
+          if [ "${COVERAGE:-0}" != "N/A" ] && [ "${COVERAGE:-0}" -lt 70 ]; then
+            echo "- 📈 Consider adding more tests to improve code coverage (target: >70%)" >> review-summary.md
+          fi
+          
+          echo "" >> review-summary.md
+          echo "---" >> review-summary.md
+          echo "*Automated review by GitHub Actions*" >> review-summary.md
+
+      - name: Comment PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let reviewSummary = '';
+            
+            try {
+              reviewSummary = fs.readFileSync('review-summary.md', 'utf8');
+            } catch (error) {
+              reviewSummary = '## Code Review Summary\n\n⚠️ Unable to generate complete review summary. Please check the workflow logs.\n';
+            }
+            
+            // Find existing review comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Code Review Summary')
+            );
+            
+            // Create or update comment
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: reviewSummary
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: reviewSummary
+              });
+            }
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: target/surefire-reports/
+          if-no-files-found: ignore
+
+      - name: Upload code coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: target/site/jacoco/
+          if-no-files-found: ignore
